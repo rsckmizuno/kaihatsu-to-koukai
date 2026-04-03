@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supabase + Vercel 開発マニュアル（初心者向け完全版）</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--bg2:#0f1420;--bg3:#151b2b;
+  --surface:#1a2236;--surface2:#1f2940;--surface3:#253350;
+  --text:#e4e8f1;--text2:#9aa3b8;--text3:#6b7a94;
+  --accent:#3ecf8e;--accent2:#24b47e;--accent-glow:rgba(62,207,142,.15);
+  --purple:#8b5cf6;--purple-glow:rgba(139,92,246,.12);
+  --orange:#f59e0b;--orange-glow:rgba(245,158,11,.12);
+  --red:#ef4444;--red-glow:rgba(239,68,68,.1);
+  --blue:#3b82f6;--blue-glow:rgba(59,130,246,.12);
+  --cyan:#06b6d4;--pink:#ec4899;
+  --border:#1e2a40;--border2:#2a3654;
+  --radius:12px;--radius-lg:20px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Noto Sans JP',sans-serif;font-weight:400;background:var(--bg);color:var(--text);line-height:1.85;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(62,207,142,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(62,207,142,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,black 20%,transparent 70%)}
+.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(62,207,142,.08),transparent 70%);top:10%;left:50%;transform:translateX(-50%);pointer-events:none;animation:pulse 6s ease-in-out infinite}
+.hero-glow-2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.06),transparent 70%);bottom:10%;right:10%;pointer-events:none;animation:pulse 8s ease-in-out infinite reverse}
+@keyframes pulse{0%,100%{opacity:.6;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.15)}}
+.hero-content{position:relative;text-align:center;padding:2rem}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--border2);padding:.4rem 1rem;border-radius:999px;font-size:.8rem;color:var(--text2);margin-bottom:2rem;animation:fadeUp .8s ease both}
+.hero-badge span{color:var(--accent);font-weight:500}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(2.5rem,6vw,4.5rem);line-height:1.15;color:var(--text);letter-spacing:-.02em;animation:fadeUp .8s ease .1s both}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero-sub{font-size:clamp(.95rem,2vw,1.2rem);color:var(--text2);max-width:640px;margin:1.5rem auto 1rem;font-weight:300;animation:fadeUp .8s ease .2s both}
+.hero-audience{font-size:.85rem;color:var(--text3);margin-bottom:2rem;animation:fadeUp .8s ease .25s both}
+.hero-stack{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s ease .3s both}
+.hero-stack .chip{background:var(--surface);border:1px solid var(--border2);padding:.35rem .9rem;border-radius:8px;font-size:.78rem;color:var(--text2);font-weight:500;transition:all .3s}
+.hero-stack .chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+.hero-scroll{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);animation:fadeUp .8s ease .5s both,bounce 2s ease-in-out 1.5s infinite}
+.hero-scroll svg{width:24px;height:24px;color:var(--text3)}
+@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.side-nav{position:fixed;left:0;top:0;height:100vh;width:280px;background:var(--bg2);border-right:1px solid var(--border);padding:1.5rem 0;overflow-y:auto;z-index:100;transform:translateX(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1)}
+.side-nav.open{transform:translateX(0)}
+.nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;opacity:0;pointer-events:none;transition:opacity .3s}
+.nav-overlay.open{opacity:1;pointer-events:auto}
+.nav-brand{padding:0 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
+.nav-brand h3{font-size:.85rem;color:var(--accent);font-weight:700;letter-spacing:.05em}
+.nav-brand p{font-size:.7rem;color:var(--text3);margin-top:.15rem}
+.nav-group{padding:0 .75rem;margin-bottom:.35rem}
+.nav-group-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);padding:.5rem .5rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.6rem;padding:.4rem .75rem;border-radius:8px;font-size:.8rem;color:var(--text2);text-decoration:none;transition:all .2s;cursor:pointer}
+.nav-link:hover{background:var(--surface);color:var(--text)}
+.nav-link .num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;font-family:'JetBrains Mono',monospace;background:var(--surface);color:var(--text3);flex-shrink:0}
+.menu-btn{position:fixed;top:1rem;left:1rem;z-index:101;width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;color:var(--text2)}
+.menu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.menu-btn svg{width:18px;height:18px}
+.main{max-width:860px;margin:0 auto;padding:0 1.5rem 6rem}
+.section{padding:4.5rem 0 2rem;opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.section.visible{opacity:1;transform:translateY(0)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;color:var(--accent);letter-spacing:.1em;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.section-num::after{content:'';flex:1;height:1px;background:var(--border2)}
+.section h2{font-family:'DM Serif Display',serif;font-size:clamp(1.7rem,3.5vw,2.3rem);line-height:1.25;color:var(--text);margin-bottom:.75rem}
+.section>p,.sub-section>p{color:var(--text2);max-width:720px;margin-bottom:1rem;font-size:.92rem}
+.sub-section{margin:2rem 0;padding:1.5rem;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);position:relative}
+.sub-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--accent);margin-bottom:.6rem;font-family:'JetBrains Mono',monospace}
+.sub-section h3{font-size:1.1rem;color:var(--text);font-weight:700;margin-bottom:.5rem}
+.analogy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem;margin:1.25rem 0}
+.analogy-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;transition:all .3s;position:relative;overflow:hidden}
+.analogy-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--purple));opacity:0;transition:opacity .3s}
+.analogy-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.analogy-card:hover::before{opacity:1}
+.analogy-icon{font-size:1.5rem;margin-bottom:.35rem}
+.analogy-card h4{font-size:.82rem;color:var(--text);margin-bottom:.15rem;font-weight:600}
+.analogy-card p{font-size:.76rem;color:var(--text2);margin:0;line-height:1.55}
+.arch-diagram{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;margin:1.25rem 0;position:relative;overflow:hidden}
+.arch-diagram::before{content:'';position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle,var(--accent-glow),transparent 70%);pointer-events:none}
+.arch-flow{display:flex;flex-direction:column;gap:1rem;position:relative}
+.arch-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.arch-node{padding:.5rem .85rem;border-radius:10px;font-size:.78rem;font-weight:500;display:flex;align-items:center;gap:.35rem;white-space:nowrap}
+.arch-node.local{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.25);color:#c4b5fd}
+.arch-node.github{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text)}
+.arch-node.vercel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff}
+.arch-node.supabase{background:var(--accent-glow);border:1px solid rgba(62,207,142,.3);color:var(--accent)}
+.arch-node.branch{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#93c5fd}
+.arch-arrow{color:var(--text3);font-size:1.1rem;flex-shrink:0}
+.arch-label{font-size:.68rem;color:var(--text3);font-weight:500;letter-spacing:.05em;margin-bottom:.3rem}
+.steps{display:flex;flex-direction:column;gap:.75rem;margin:1rem 0}
+.step{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1rem 1rem .85rem;display:flex;gap:.85rem;transition:all .3s}
+.step:hover{border-color:var(--accent);background:var(--surface2)}
+.step-num{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:var(--accent-glow);border:1px solid rgba(62,207,142,.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;color:var(--accent)}
+.step-body h4{font-size:.88rem;color:var(--text);margin-bottom:.2rem;font-weight:600}
+.step-body p{font-size:.82rem;color:var(--text2);margin:0;line-height:1.65}
+.step-body p+p{margin-top:.35rem}
+.substep{margin-top:.5rem;padding:.6rem .75rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:.8rem;color:var(--text2);line-height:1.65}
+.substep code{font-family:'JetBrains Mono',monospace;font-size:.75rem;background:var(--surface2);padding:.1rem .35rem;border-radius:4px;color:var(--accent)}
+.substep strong{color:var(--text);font-weight:600}
+.code-block{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);margin:.85rem 0;overflow:hidden}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:.45rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);font-size:.7rem;color:var(--text3)}
+.code-header .lang{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
+.code-block pre{padding:.85rem 1rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.75;color:var(--text2)}
+.code-block pre .c{color:var(--text3)}.code-block pre .k{color:var(--purple)}.code-block pre .v{color:var(--accent)}.code-block pre .o{color:var(--orange)}.code-block pre .r{color:var(--red)}.code-block pre .b{color:var(--blue)}.code-block pre .p{color:var(--pink)}
+.data-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;margin:1rem 0}
+.data-table th{background:var(--surface2);padding:.6rem .85rem;text-align:left;font-size:.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border2)}
+.data-table td{padding:.55rem .85rem;font-size:.83rem;color:var(--text2);border-bottom:1px solid var(--border)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface)}
+.data-table code{font-family:'JetBrains Mono',monospace;font-size:.76rem;background:var(--bg);padding:.12rem .35rem;border-radius:4px;color:var(--accent)}
+.callout{border-radius:var(--radius);padding:1rem 1.1rem;margin:1rem 0;display:flex;gap:.7rem;align-items:flex-start}
+.callout.tip{background:var(--accent-glow);border:1px solid rgba(62,207,142,.2)}
+.callout.warn{background:var(--red-glow);border:1px solid rgba(239,68,68,.2)}
+.callout.info{background:var(--blue-glow);border:1px solid rgba(59,130,246,.2)}
+.callout.note{background:var(--purple-glow);border:1px solid rgba(139,92,246,.2)}
+.callout-icon{font-size:1rem;flex-shrink:0;margin-top:.15rem}
+.callout-body h4{font-size:.82rem;font-weight:600;margin-bottom:.15rem}
+.callout.tip .callout-body h4{color:var(--accent)}.callout.warn .callout-body h4{color:var(--red)}.callout.info .callout-body h4{color:var(--blue)}.callout.note .callout-body h4{color:var(--purple)}
+.callout-body p{font-size:.8rem;color:var(--text2);margin:0;line-height:1.6}
+.callout-body p+p{margin-top:.3rem}
+.flow{display:flex;flex-direction:column;gap:0;margin:1.25rem 0;position:relative}
+.flow::before{content:'';position:absolute;left:19px;top:24px;bottom:24px;width:2px;background:var(--border2)}
+.flow-item{display:flex;gap:.85rem;padding:.5rem 0;position:relative}
+.flow-dot{width:40px;height:40px;border-radius:10px;flex-shrink:0;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;color:var(--text3);z-index:1;transition:all .3s}
+.flow-item:hover .flow-dot{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+.flow-content{padding-top:.3rem;flex:1}
+.flow-content h4{font-size:.86rem;color:var(--text);font-weight:600;margin-bottom:.1rem}
+.flow-content p{font-size:.8rem;color:var(--text2);margin:0}
+.flow-content code{font-family:'JetBrains Mono',monospace;font-size:.74rem;background:var(--bg);padding:.1rem .35rem;border-radius:4px;color:var(--purple)}
+.rules-grid{display:grid;gap:.85rem;margin:1.25rem 0}
+.rule-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;position:relative;overflow:hidden;transition:all .3s}
+.rule-card:hover{transform:translateY(-2px);border-color:var(--red)}
+.rule-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+.rule-num{font-family:'JetBrains Mono',monospace;font-size:2.2rem;font-weight:900;color:rgba(239,68,68,.12);position:absolute;right:1rem;top:.4rem}
+.rule-card h4{font-size:.95rem;color:var(--text);font-weight:700;margin-bottom:.3rem}
+.rule-card p{font-size:.83rem;color:var(--text2);margin:0;line-height:1.6;max-width:85%}
+.rule-card .example{margin-top:.5rem;padding:.5rem .7rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:.78rem;color:var(--text3);line-height:1.6}
+.rule-card .example strong{color:var(--red)}
+.rule-card .example .good{color:var(--accent)}
+.summary-banner{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border2);border-radius:var(--radius-lg);padding:2.25rem;margin:3rem 0;text-align:center;position:relative;overflow:hidden}
+.summary-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top,var(--accent-glow),transparent 60%);pointer-events:none}
+.summary-banner h3{font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:1.25rem;position:relative}
+.summary-items{display:flex;flex-direction:column;gap:.65rem;align-items:center;position:relative}
+.summary-item{display:flex;align-items:center;gap:.6rem;font-size:.95rem;color:var(--text2)}
+.summary-item .num{width:26px;height:26px;border-radius:8px;flex-shrink:0;background:var(--accent-glow);border:1px solid rgba(62,207,142,.25);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;color:var(--accent)}
+.glossary{display:grid;gap:.5rem;margin:1rem 0}
+.glossary-item{display:flex;gap:.75rem;padding:.6rem .85rem;background:var(--surface);border:1px solid var(--border2);border-radius:10px;transition:all .2s}
+.glossary-item:hover{border-color:var(--accent)}
+.glossary-term{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:600;color:var(--accent);min-width:140px;flex-shrink:0}
+.glossary-def{font-size:.82rem;color:var(--text2);line-height:1.55}
+.cmd-group{margin:1.5rem 0}
+.cmd-group h3{font-size:.92rem;color:var(--text);font-weight:600;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.cmd-group h3 span{display:inline-block;padding:.12rem .45rem;border-radius:6px;font-size:.68rem;font-weight:600;letter-spacing:.05em}
+.cmd-group h3 .git-tag{background:rgba(245,158,11,.12);color:var(--orange)}
+.cmd-group h3 .sb-tag{background:var(--accent-glow);color:var(--accent)}
+.cmd-group h3 .vc-tag{background:rgba(255,255,255,.08);color:var(--text)}
+@media(max-width:640px){.main{padding:0 1rem 4rem}.section{padding:3rem 0 1.5rem}.arch-row{flex-direction:column;align-items:flex-start}.arch-arrow{transform:rotate(90deg)}.analogy-grid{grid-template-columns:1fr 1fr}.sub-section{padding:1rem}.glossary-item{flex-direction:column;gap:.2rem}.glossary-term{min-width:auto}}
+@media(max-width:420px){.analogy-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="toggleNav()" aria-label="メニュー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+<div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
+<nav class="side-nav" id="sideNav">
+  <div class="nav-brand"><h3>DEV MANUAL</h3><p>Supabase + Vercel 完全版</p></div>
+  <div class="nav-group"><div class="nav-group-label">基礎知識</div>
+    <a class="nav-link" onclick="goTo('s0')"><span class="num">00</span>用語集</a>
+    <a class="nav-link" onclick="goTo('s1')"><span class="num">01</span>全体像</a>
+    <a class="nav-link" onclick="goTo('s2')"><span class="num">02</span>構成図</a></div>
+  <div class="nav-group"><div class="nav-group-label">環境構築</div>
+    <a class="nav-link" onclick="goTo('s3')"><span class="num">03</span>事前準備</a>
+    <a class="nav-link" onclick="goTo('s4')"><span class="num">04</span>GitHubリポジトリ作成</a>
+    <a class="nav-link" onclick="goTo('s5')"><span class="num">05</span>Supabase DB作成</a>
+    <a class="nav-link" onclick="goTo('s6')"><span class="num">06</span>環境変数の設定</a>
+    <a class="nav-link" onclick="goTo('s7')"><span class="num">07</span>Vercelでデプロイ</a></div>
+  <div class="nav-group"><div class="nav-group-label">日常の開発</div>
+    <a class="nav-link" onclick="goTo('s8')"><span class="num">08</span>ブランチ運用</a>
+    <a class="nav-link" onclick="goTo('s9')"><span class="num">09</span>新機能の開発手順</a>
+    <a class="nav-link" onclick="goTo('s10')"><span class="num">10</span>DBの変更</a>
+    <a class="nav-link" onclick="goTo('s11')"><span class="num">11</span>テストから本番へ</a></div>
+  <div class="nav-group"><div class="nav-group-label">運用・トラブル</div>
+    <a class="nav-link" onclick="goTo('s12')"><span class="num">12</span>ロールバック</a>
+    <a class="nav-link" onclick="goTo('s13')"><span class="num">13</span>3つの絶対ルール</a></div>
+  <div class="nav-group"><div class="nav-group-label">付録</div>
+    <a class="nav-link" onclick="goTo('ref')"><span class="num">＊</span>コマンド一覧</a>
+    <a class="nav-link" onclick="goTo('checklist')"><span class="num">✓</span>チェックリスト</a></div>
+</nav>
+<header class="hero"><div class="hero-grid"></div><div class="hero-glow"></div><div class="hero-glow-2"></div>
+  <div class="hero-content">
+    <div class="hero-badge">📘 <span>Complete Guide for Beginners</span></div>
+    <h1>Supabase + <em>Vercel</em><br>安全な開発マニュアル</h1>
+    <p class="hero-sub">テスト環境と本番環境を分けて、公開から改修までを安全に実現するための完全ガイド</p>
+    <p class="hero-audience">対象：はじめてシステム開発を行う方 ／ 開発環境の構築がはじめての方</p>
+    <div class="hero-stack"><span class="chip">Cursor</span><span class="chip">Claude</span><span class="chip">GitHub</span><span class="chip">Supabase</span><span class="chip">Vercel</span></div>
+  </div>
+  <div class="hero-scroll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>
+</header>
+<main class="main">
+
+<section class="section" id="s0"><div class="section-num">SECTION 00</div><h2>まず覚える用語集</h2><p>このマニュアルで使う言葉をまとめました。わからなくなったらここに戻ってきてください。</p>
+<div class="glossary">
+  <div class="glossary-item"><span class="glossary-term">リポジトリ</span><span class="glossary-def">コードを保管する場所（フォルダのようなもの）。GitHubに作る。</span></div>
+  <div class="glossary-item"><span class="glossary-term">ブランチ</span><span class="glossary-def">コードの「枝」。コピーを作って自由に作業できる。元のコードは安全なまま。</span></div>
+  <div class="glossary-item"><span class="glossary-term">コミット</span><span class="glossary-def">変更を「記録」すること。ゲームのセーブポイントのようなもの。</span></div>
+  <div class="glossary-item"><span class="glossary-term">プッシュ</span><span class="glossary-def">自分のPCの変更をGitHubにアップロードすること。</span></div>
+  <div class="glossary-item"><span class="glossary-term">プル</span><span class="glossary-def">GitHubの最新の変更を自分のPCにダウンロードすること。</span></div>
+  <div class="glossary-item"><span class="glossary-term">クローン</span><span class="glossary-def">GitHubのリポジトリを自分のPCにまるごとコピーすること。最初の1回だけ行う。</span></div>
+  <div class="glossary-item"><span class="glossary-term">プルリクエスト（PR）</span><span class="glossary-def">「このコードを見て、合体してください」というお願い。GitHub上で行う。</span></div>
+  <div class="glossary-item"><span class="glossary-term">マージ</span><span class="glossary-def">ブランチ同士を合体させること。PRを承認すると実行される。</span></div>
+  <div class="glossary-item"><span class="glossary-term">デプロイ</span><span class="glossary-def">コードをサーバーに反映して、ネットから見られるようにすること。</span></div>
+  <div class="glossary-item"><span class="glossary-term">環境変数</span><span class="glossary-def">コードの外に置く設定値。パスワードやURLなど秘密の情報を入れる。</span></div>
+  <div class="glossary-item"><span class="glossary-term">マイグレーション</span><span class="glossary-def">DBのテーブル構造を変更すること。変更内容をSQLファイルに記録して管理する。</span></div>
+  <div class="glossary-item"><span class="glossary-term">ロールバック</span><span class="glossary-def">問題が起きたとき、以前の正常な状態に巻き戻すこと。</span></div>
+</div></section>
+
+<section class="section" id="s1"><div class="section-num">SECTION 01</div><h2>全体像：お弁当屋さんで理解する</h2><p>まずはたとえ話で全体のイメージをつかみましょう。</p>
+<div class="analogy-grid">
+  <div class="analogy-card"><div class="analogy-icon">🧪</div><h4>試食コーナー</h4><p>テスト環境。関係者だけで確認する場所。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🏪</div><h4>お店のカウンター</h4><p>本番環境。お客さんが使う場所。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">📒</div><h4>レシピノート</h4><p>GitHub。コードの保管庫。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🍳</div><h4>キッチン</h4><p>Cursor。コードを書く作業場。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🤖</div><h4>料理の相棒</h4><p>Claude。コーディングAI。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🗄️</div><h4>冷蔵庫（2台）</h4><p>Supabase DB。データの保管場所。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🚚</div><h4>配達トラック</h4><p>Vercel。サイトを届けてくれる。</p></div>
+  <div class="analogy-card"><div class="analogy-icon">🔑</div><h4>鍵</h4><p>環境変数。DBを開ける鍵。</p></div>
+</div>
+<div class="callout tip"><div class="callout-icon">💡</div><div class="callout-body"><h4>この仕組みのメリット</h4><p>試食コーナーで味見してOKが出たものだけ、お店のカウンターに出す。こうすることで「お客さんに未完成の料理を出す事故」を防ぎます。</p></div></div>
+</section>
+
+<section class="section" id="s2"><div class="section-num">SECTION 02</div><h2>環境の全体構成図</h2><p>コードが書かれてからお客さんに届くまでの流れです。2つのルートがあることを覚えてください。</p>
+<div class="arch-diagram"><div class="arch-flow">
+  <div><div class="arch-label">① あなたのPC（ここでコードを書く）</div><div class="arch-row"><div class="arch-node local">🖥 Cursor + Claude</div><div class="arch-arrow">→</div><div class="arch-node github">📦 GitHub</div></div></div>
+  <div><div class="arch-label">② 本番ルート（mainブランチ → お客さんが見るサイト）</div><div class="arch-row"><div class="arch-node branch">🌿 main</div><div class="arch-arrow">→</div><div class="arch-node vercel">▲ Vercel 本番</div><div class="arch-arrow">→</div><div class="arch-node supabase">⚡ Supabase 本番DB</div></div></div>
+  <div><div class="arch-label">③ テストルート（developブランチ → 関係者だけが見るサイト）</div><div class="arch-row"><div class="arch-node branch">🌿 develop</div><div class="arch-arrow">→</div><div class="arch-node vercel">▲ Vercel テスト</div><div class="arch-arrow">→</div><div class="arch-node supabase">⚡ Supabase テストDB</div></div></div>
+</div></div>
+<div class="callout warn"><div class="callout-icon">⚠️</div><div class="callout-body"><h4>最重要ポイント</h4><p>本番用とテスト用で <strong>VercelのサイトもSupabaseのDBも完全に別物</strong> にします。同じDBを共有すると、テストデータがお客さんに見えてしまう事故が起きます。</p></div></div>
+</section>
+
+<section class="section" id="s3"><div class="section-num">SECTION 03</div><h2>事前準備：アカウントとツール</h2><p>以下の4つのアカウント作成と2つのツールをインストールします。すべて無料プランで始められます。</p>
+<div class="sub-section"><div class="sub-label">STEP A</div><h3>アカウントを作成する（4つ）</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>GitHub アカウント</h4><p>https://github.com → 「Sign up」 → メール・パスワードを入力して作成</p><div class="substep"><strong>ポイント：</strong>ユーザー名はずっと使うので、本名やプロジェクト名に関連するものがおすすめ</div></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Supabase アカウント</h4><p>https://supabase.com → 「Start your project」 → <strong>GitHubアカウントでログイン</strong>が簡単</p></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Vercel アカウント</h4><p>https://vercel.com → 「Sign Up」 → <strong>GitHubアカウントでログイン</strong>が簡単</p></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Anthropic アカウント（Claude用）</h4><p>CursorにAnthropicのAPIキーを設定するか、Cursor ProプランでClaude対応を確認してください</p></div></div>
+</div></div>
+<div class="sub-section"><div class="sub-label">STEP B</div><h3>ツールをインストールする</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Cursor（コードエディタ）</h4><p>https://cursor.sh からダウンロードしてインストール</p>
+    <div class="substep"><strong>インストール後の確認：</strong>Cursorを開いて、ターミナル（メニュー → Terminal → New Terminal）で以下を入力：<br><code>node -v</code> → バージョン番号が出ればOK<br><code>git --version</code> → バージョン番号が出ればOK<br><br>出ない場合は Node.js（https://nodejs.org）と Git（https://git-scm.com）を別途インストールしてください</div></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Supabase CLI</h4><p>Cursorのターミナルで以下を実行：</p>
+    <div class="substep"><code>npm install -g supabase</code><br><br><strong>確認：</strong><code>supabase --version</code> → バージョン番号が出ればOK</div></div></div>
+</div></div>
+</section>
+
+<section class="section" id="s4"><div class="section-num">SECTION 04</div><h2>GitHubリポジトリを作成する</h2><p>コードを保管する「リポジトリ」をGitHubに作成し、自分のPCと接続します。</p>
+<div class="sub-section"><div class="sub-label">STEP A</div><h3>GitHubでリポジトリを作る</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>GitHubにログイン</h4><p>https://github.com にアクセスしてログイン</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>右上の「+」→「New repository」をクリック</h4></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>リポジトリの設定を入力</h4>
+    <div class="substep"><strong>Repository name：</strong>プロジェクト名（例：<code>my-app</code>）<br><strong>Description：</strong>説明（任意）<br><strong>Private を選択</strong>（公開したくないコードの場合）<br><strong>「Add a README file」にチェック</strong><br><strong>「Add .gitignore」→ 「Node」を選択</strong><br>→「Create repository」をクリック</div></div></div>
+</div></div>
+<div class="sub-section"><div class="sub-label">STEP B</div><h3>PCにクローン（ダウンロード）する</h3>
+<div class="code-block"><div class="code-header"><span class="lang">Terminal</span><span>Cursorのターミナルで実行</span></div>
+<pre><span class="c"># 作業フォルダに移動（例：デスクトップ）</span>
+<span class="o">cd</span> ~/Desktop
+
+<span class="c"># リポジトリをダウンロード（URLはGitHubからコピー）</span>
+<span class="o">git clone</span> <span class="v">https://github.com/あなたのユーザー名/my-app.git</span>
+
+<span class="c"># ダウンロードしたフォルダに移動</span>
+<span class="o">cd</span> my-app</pre></div>
+<div class="callout info"><div class="callout-icon">💬</div><div class="callout-body"><h4>クローンURLの取得方法</h4><p>GitHubのリポジトリページ → 緑色の「&lt;&gt; Code」ボタン → 「HTTPS」タブのURLをコピー</p></div></div>
+</div>
+<div class="sub-section"><div class="sub-label">STEP C</div><h3>developブランチを作成する</h3>
+<div class="code-block"><div class="code-header"><span class="lang">Terminal</span><span>テスト環境用のブランチを作る</span></div>
+<pre><span class="c"># developブランチを作って切り替え</span>
+<span class="o">git checkout -b</span> <span class="v">develop</span>
+
+<span class="c"># GitHubにdevelopブランチを送る</span>
+<span class="o">git push</span> origin develop</pre></div>
+<div class="callout note"><div class="callout-icon">📝</div><div class="callout-body"><h4>この時点のブランチ構成</h4><p><code>main</code>（本番用）と <code>develop</code>（テスト用）の2本ができました。今後はdevelopをベースに作業します。</p></div></div>
+</div></section>
+
+<section class="section" id="s5"><div class="section-num">SECTION 05</div><h2>SupabaseでDBを2つ作る</h2><p>テスト用と本番用で、完全に別のデータベースを用意します。同じ手順を2回行います。</p>
+<div class="sub-section"><div class="sub-label">1回目</div><h3>テスト用プロジェクト（my-app-dev）を作成</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Supabaseダッシュボードにログイン</h4><p>https://supabase.com/dashboard にアクセス</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>「New Project」をクリック</h4><p>Organization を選択する画面が出たら、自分の名前の組織を選択</p></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>プロジェクト情報を入力</h4>
+    <div class="substep"><strong>Name：</strong><code>my-app-dev</code>（テスト用とわかる名前）<br><strong>Database Password：</strong>「Generate a password」をクリック → <strong>必ずメモ帳に保存</strong><br><strong>Region：</strong>Northeast Asia (Tokyo)<br><strong>Pricing Plan：</strong>Free<br>→「Create new project」をクリック</div></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><h4>接続情報を4つメモする</h4>
+    <div class="substep"><strong>① Project URL：</strong>Settings → API → 「Project URL」<br><strong>② anon key：</strong>Settings → API → 「anon public」<br><strong>③ service_role key：</strong>Settings → API → 「service_role secret」（目のアイコンで表示）<br><strong>④ Project ref：</strong>Settings → General → 「Reference ID」</div></div></div>
+</div></div>
+<div class="sub-section"><div class="sub-label">2回目</div><h3>本番用プロジェクト（my-app-prod）を作成</h3><p>上と全く同じ手順で、名前を <code>my-app-prod</code> にして作成。同じく接続情報を4つメモします。</p></div>
+<div class="callout warn"><div class="callout-icon">🔴</div><div class="callout-body"><h4>鍵の管理について</h4><p>特に service_role key は最重要の鍵です。漏れるとDBの全データにアクセスされます。パスワードマネージャー（1Password、Bitwardenなど）での管理を強く推奨します。</p></div></div>
+<p>メモ完了後、以下のような一覧ができているはずです：</p>
+<table class="data-table"><thead><tr><th></th><th>テスト用（dev）</th><th>本番用（prod）</th></tr></thead><tbody>
+  <tr><td>Project URL</td><td><code>https://xxxxx.supabase.co</code></td><td><code>https://yyyyy.supabase.co</code></td></tr>
+  <tr><td>anon key</td><td><code>eyJhbGci...xxx</code></td><td><code>eyJhbGci...yyy</code></td></tr>
+  <tr><td>service_role key</td><td><code>eyJhbGci...xxx</code></td><td><code>eyJhbGci...yyy</code></td></tr>
+  <tr><td>Project ref</td><td><code>xxxxxxxxxx</code></td><td><code>yyyyyyyyyy</code></td></tr>
+</tbody></table></section>
+
+<section class="section" id="s6"><div class="section-num">SECTION 06</div><h2>環境変数を設定する</h2><p>Supabaseの鍵をコードに直接書くのは危険です。「環境変数」という仕組みで、コードの外に安全に保管します。</p>
+<div class="sub-section"><div class="sub-label">STEP A</div><h3>ローカル開発用の .env.local を作成</h3><p>プロジェクトのルートフォルダ（my-appの直下）に <code>.env.local</code> ファイルを新規作成します。</p>
+<div class="code-block"><div class="code-header"><span class="lang">.env.local</span><span>テスト用の鍵を入れる</span></div>
+<pre><span class="c"># Supabase テスト用（devプロジェクト）の接続情報</span>
+<span class="k">NEXT_PUBLIC_SUPABASE_URL</span>=<span class="v">https://xxxxx.supabase.co</span>
+<span class="k">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>=<span class="v">eyJhbGci...テスト用のanon key...</span>
+<span class="k">SUPABASE_SERVICE_ROLE_KEY</span>=<span class="v">eyJhbGci...テスト用のservice_role key...</span></pre></div>
+<div class="callout info"><div class="callout-icon">💬</div><div class="callout-body"><h4>Cursorでのファイル作成方法</h4><p>① 左のファイル一覧でプロジェクト名を右クリック → 「New File」<br>② ファイル名に <code>.env.local</code> と入力（先頭のドットを忘れずに！）<br>③ 上の内容を貼り付けて、鍵の部分を自分のものに置き換え</p></div></div></div>
+<div class="sub-section"><div class="sub-label">STEP B</div><h3>.gitignore に追加されているか確認</h3>
+<div class="code-block"><div class="code-header"><span class="lang">.gitignore</span><span>この行があることを確認（なければ追加）</span></div>
+<pre><span class="r">.env.local</span>
+<span class="r">.env*.local</span>
+<span class="r">.env</span></pre></div>
+<div class="callout warn"><div class="callout-icon">🚫</div><div class="callout-body"><h4">なぜ .gitignore が必要？</h4><p>.gitignore に書かれたファイルはGitHubにアップロードされません。鍵入りファイルを誤ってアップすると全世界に公開される危険があります。</p></div></div></div>
+<div class="sub-section"><div class="sub-label">STEP C</div><h3>コードでの環境変数の使い方</h3>
+<div class="code-block"><div class="code-header"><span class="lang">TypeScript</span><span>lib/supabase.ts の例</span></div>
+<pre><span class="k">import</span> { createClient } <span class="k">from</span> <span class="v">'@supabase/supabase-js'</span>
+
+<span class="c">// 環境変数から鍵を取得（値はコードに書かない！）</span>
+<span class="k">const</span> supabaseUrl = <span class="b">process.env.NEXT_PUBLIC_SUPABASE_URL</span>!
+<span class="k">const</span> supabaseKey = <span class="b">process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY</span>!
+
+<span class="k">export const</span> supabase = createClient(supabaseUrl, supabaseKey)</pre></div>
+<div class="callout tip"><div class="callout-icon">💡</div><div class="callout-body"><h4>ここがポイント</h4><p>このコードは本番でもテストでも同じです。環境変数の値が環境ごとに違うので、コードを変えなくても接続先が自動で切り替わります。</p></div></div></div>
+</section>
+
+<section class="section" id="s7"><div class="section-num">SECTION 07</div><h2>Vercelでデプロイ（公開）する</h2><p>VercelとGitHubを接続すると、コードをプッシュするだけで自動でサイトが公開されます。</p>
+<div class="sub-section"><div class="sub-label">STEP A</div><h3>VercelにGitHubリポジトリを接続</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Vercelにログイン → 「Add New...」→「Project」</h4></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>リポジトリ一覧から my-app を選択して「Import」</h4></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>フレームワークを確認</h4><p>Next.jsの場合は自動検出されます</p></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><h4>⚠️ まだ「Deploy」は押さない！先に環境変数を設定</h4></div></div>
+</div></div>
+<div class="sub-section"><div class="sub-label">STEP B</div><h3>環境変数をVercelに設定する（最重要）</h3>
+<div class="callout info"><div class="callout-icon">🎯</div><div class="callout-body"><h4>環境ごとに違う値を設定するのがポイント</h4><p>各変数を登録するとき「Environment」のチェックボックスで Production と Preview を分けて、それぞれ別の値を入れます。</p></div></div>
+<p><strong>具体的な手順（1つの変数につき2回登録します）：</strong></p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>NEXT_PUBLIC_SUPABASE_URL を本番用で登録</h4>
+    <div class="substep"><strong>Key：</strong><code>NEXT_PUBLIC_SUPABASE_URL</code><br><strong>Value：</strong>本番用（prod）のProject URL<br><strong>Environment：</strong>「Production」だけにチェック → 「Add」</div></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>同じキーをテスト用で登録</h4>
+    <div class="substep"><strong>Key：</strong><code>NEXT_PUBLIC_SUPABASE_URL</code>（同じキー名）<br><strong>Value：</strong>テスト用（dev）のProject URL<br><strong>Environment：</strong>「Preview」と「Development」にチェック → 「Add」</div></div></div>
+</div>
+<p>同じ手順で <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> と <code>SUPABASE_SERVICE_ROLE_KEY</code> も2回ずつ登録してください。</p>
+<table class="data-table"><thead><tr><th>環境変数名</th><th>Production（本番）</th><th>Preview（テスト）</th></tr></thead><tbody>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>prod の URL</td><td>dev の URL</td></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>prod の anon key</td><td>dev の anon key</td></tr>
+  <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>prod の service_role</td><td>dev の service_role</td></tr>
+</tbody></table></div>
+<div class="sub-section"><div class="sub-label">STEP C</div><h3>デプロイ実行</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>「Deploy」ボタンをクリック</h4><p>ビルドが始まります（2〜3分待つ）</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>完了すると本番URLが発行される</h4><p>例：<code>https://my-app.vercel.app</code>。これが本番サイトです。</p></div></div>
+</div>
+<div class="callout tip"><div class="callout-icon">🚀</div><div class="callout-body"><h4>これ以降は自動デプロイ</h4><p><strong>mainにマージ</strong> → 本番サイトが自動更新<br><strong>developにプッシュ</strong> → テスト用Preview URLが自動生成<br>手動のデプロイ操作は今後不要です。</p></div></div></div>
+</section>
+
+<section class="section" id="s8"><div class="section-num">SECTION 08</div><h2>ブランチの使い方</h2><p>ブランチの使い分けは安全な開発の要です。以下の3層構造を守ってください。</p>
+<table class="data-table"><thead><tr><th>ブランチ名</th><th>役割</th><th>誰が使う？</th><th>ルール</th></tr></thead><tbody>
+  <tr><td><code>main</code></td><td>本番用の完成品</td><td>自動デプロイのみ</td><td><strong>直接プッシュ禁止</strong></td></tr>
+  <tr><td><code>develop</code></td><td>テスト用まとめ場</td><td>PRでのみマージ</td><td>ここで動作確認する</td></tr>
+  <tr><td><code>feature/◯◯</code></td><td>機能ごとの作業場</td><td>開発者</td><td>作業後に削除</td></tr>
+</tbody></table>
+<div class="callout note"><div class="callout-icon">📝</div><div class="callout-body"><h4>ブランチ名のつけ方</h4><p><strong>新機能：</strong><code>feature/login-page</code>　<code>feature/user-profile</code><br><strong>バグ修正：</strong><code>fix/header-layout</code>　<code>fix/login-error</code><br>日本語は使わず、短い英語で内容がわかる名前をつけてください。</p></div></div>
+</section>
+
+<section class="section" id="s9"><div class="section-num">SECTION 09</div><h2>新機能の開発手順</h2><p>コードを書いて、テストして、本番に反映するまでの全手順です。</p>
+<div class="sub-section"><div class="sub-label">PHASE 1</div><h3>作業ブランチを作る</h3>
+<div class="code-block"><div class="code-header"><span class="lang">Terminal</span></div>
+<pre><span class="c"># まずdevelopの最新を取得</span>
+<span class="o">git checkout</span> develop
+<span class="o">git pull</span> origin develop
+
+<span class="c"># 作業ブランチを作成（例：ログインページ）</span>
+<span class="o">git checkout -b</span> <span class="v">feature/login-page</span></pre></div>
+<div class="callout tip"><div class="callout-icon">💡</div><div class="callout-body"><h4>なぜ毎回 git pull する？</h4><p>他で変更が加えられている可能性があります。最新から始めないと後でコンフリクト（競合）が起きやすくなります。</p></div></div></div>
+
+<div class="sub-section"><div class="sub-label">PHASE 2</div><h3>コードを書いてコミット</h3>
+<div class="code-block"><div class="code-header"><span class="lang">Terminal</span><span>こまめにセーブ</span></div>
+<pre><span class="c"># 変更したファイルを確認</span>
+<span class="o">git status</span>
+
+<span class="c"># 全変更を記録対象に</span>
+<span class="o">git add</span> .
+
+<span class="c"># 変更を記録（日本語OK）</span>
+<span class="o">git commit -m</span> <span class="v">"ログインフォームのUIを作成"</span>
+
+<span class="c"># GitHubに送る</span>
+<span class="o">git push</span> origin feature/login-page</pre></div>
+<div class="callout info"><div class="callout-icon">💬</div><div class="callout-body"><h4>コミットのコツ</h4><p><strong>1つの機能ごとにコミット</strong>するのがおすすめ。「フォーム作成」「バリデーション追加」「エラー表示」のように分けると、問題時に戻しやすくなります。</p></div></div></div>
+
+<div class="sub-section"><div class="sub-label">PHASE 3</div><h3>developにプルリクエスト（PR）を出す</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>GitHubでリポジトリを開く</h4><p>ブラウザで https://github.com/あなたのユーザー名/my-app にアクセス</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>黄色いバナーの「Compare & pull request」をクリック</h4><p>表示されない場合は「Pull requests」タブ → 「New pull request」</p></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>マージ先を確認（重要！）</h4>
+    <div class="substep"><strong>base：</strong><code>develop</code> ← mainではなくdevelopを選ぶ！<br><strong>compare：</strong><code>feature/login-page</code>（自分の作業ブランチ）</div></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><h4>タイトルと説明を書いて「Create pull request」</h4><p>何を変更したか、動作確認の方法などを書いておくと後で便利</p></div></div>
+</div></div>
+
+<div class="sub-section"><div class="sub-label">PHASE 4</div><h3>テスト環境で動作確認</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>PRをマージする</h4><p>GitHub上で「Merge pull request」→「Confirm merge」</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Vercelが自動ビルド開始</h4><p>2〜3分待つ</p></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Preview URLで動作確認</h4>
+    <div class="substep"><strong>確認すべきこと：</strong><br>✅ 画面が正しく表示されるか<br>✅ ボタンやフォームが動作するか<br>✅ ブラウザのコンソール（F12）にエラーが出ていないか<br>✅ データの読み書きが正しく行われるか</div></div></div>
+</div></div></section>
+
+<section class="section" id="s10"><div class="section-num">SECTION 10</div><h2>DBの変更（マイグレーション）</h2><p>テーブルの追加や変更は、ダッシュボードでポチポチせず、SQLファイルに記録して管理します。</p>
+<div class="sub-section"><div class="sub-label">初回のみ</div><h3>Supabase CLIの初期設定</h3>
+<div class="code-block"><div class="code-header"><span class="lang">Terminal</span></div>
+<pre><span class="c"># 設定ファイルを作る</span>
+<span class="o">supabase init</span>
+
+<span class="c"># テスト用DBにリンク</span>
+<span class="o">supabase link</span> --project-ref <span class="v">テスト用のReference ID</span></pre></div></div>
+
+<div class="sub-section"><div class="sub-label">変更のたびに</div><h3>マイグレーション作成 → 適用</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>マイグレーションファイルを作成</h4><div class="substep"><code>supabase migration new add_user_profile</code><br>→ supabase/migrations/ に .sql ファイルが作られる</div></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>SQLファイルにテーブル定義を書く</h4>
+<div class="code-block"><div class="code-header"><span class="lang">SQL</span><span>例：テーブル作成</span></div>
+<pre><span class="o">CREATE TABLE</span> <span class="v">user_profiles</span> (
+  <span class="b">id</span>         uuid <span class="k">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  <span class="b">user_id</span>    uuid <span class="k">REFERENCES</span> auth.users(id),
+  <span class="b">nickname</span>   text,
+  <span class="b">created_at</span> timestamptz <span class="k">DEFAULT</span> now()
+);
+
+<span class="o">ALTER TABLE</span> user_profiles <span class="o">ENABLE ROW LEVEL SECURITY</span>;</pre></div></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>テスト用DBに適用</h4><div class="substep"><code>supabase db push</code><br>→ テスト用DBにテーブルが作られる</div></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body"><h4>テスト確認完了後、本番DBにも適用</h4><div class="substep"><code>supabase link --project-ref 本番用のReference ID</code><br><code>supabase db push</code></div></div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body"><h4>リンクをテスト用に戻す</h4><div class="substep"><code>supabase link --project-ref テスト用のReference ID</code><br>普段はテスト用にリンクしておく</div></div></div>
+</div></div>
+<div class="callout warn"><div class="callout-icon">⚠️</div><div class="callout-body"><h4>DBの変更は「取り消し」が難しい</h4><p>コードはgitで簡単に巻き戻せますが、DB変更は元に戻すのが困難です。本番適用前にSupabaseダッシュボードの Settings → Database → Backups でバックアップを確認してください。</p></div></div>
+</section>
+
+<section class="section" id="s11"><div class="section-num">SECTION 11</div><h2>テストから本番への反映</h2><p>テスト環境で問題なしを確認したら、本番環境に反映します。</p>
+<div class="flow">
+  <div class="flow-item"><div class="flow-dot">01</div><div class="flow-content"><h4>テスト環境で最終確認</h4><p>Preview URLで全機能を確認</p></div></div>
+  <div class="flow-item"><div class="flow-dot">02</div><div class="flow-content"><h4>DBマイグレーションを本番に適用（必要な場合のみ）</h4><p><code>supabase link --project-ref 本番ref</code> → <code>supabase db push</code></p></div></div>
+  <div class="flow-item"><div class="flow-dot">03</div><div class="flow-content"><h4>develop → main のPRをGitHubで作成</h4><p>base: <code>main</code>、compare: <code>develop</code></p></div></div>
+  <div class="flow-item"><div class="flow-dot">04</div><div class="flow-content"><h4>PRをマージ</h4><p>「Merge pull request」→「Confirm merge」</p></div></div>
+  <div class="flow-item"><div class="flow-dot">05</div><div class="flow-content"><h4>Vercelが自動で本番デプロイ</h4><p>2〜3分で本番サイトが更新されます 🎉</p></div></div>
+  <div class="flow-item"><div class="flow-dot">06</div><div class="flow-content"><h4>本番サイトで動作確認</h4><p>本番URLにアクセスして正常動作を確認</p></div></div>
+</div>
+<div class="callout tip"><div class="callout-icon">✅</div><div class="callout-body"><h4>本番反映前チェックリスト</h4><p>□ テスト環境で全画面が正常に表示される<br>□ コンソールにエラーが出ていない<br>□ データの読み書きが正常<br>□ DBマイグレーションは先に本番適用済み<br>□ supabase link をテスト用に戻した</p></div></div>
+</section>
+
+<section class="section" id="s12"><div class="section-num">SECTION 12</div><h2>トラブル時の対応（ロールバック）</h2><p>本番でバグが見つかったときの対処法です。落ち着いて実行してください。</p>
+<div class="sub-section"><div class="sub-label">方法 A（推奨・簡単）</div><h3>Vercelで前のバージョンに戻す</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Vercelダッシュボード → 「Deployments」タブ</h4></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>正常だったデプロイ（✓マーク）を探す</h4></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body"><h4>「…」→「Redeploy」をクリック</h4><p>「Use existing Build Cache」にチェック → 1〜2分で前の状態に戻ります</p></div></div>
+</div></div>
+<div class="sub-section"><div class="sub-label">方法 B</div><h3>Gitでリバート（コードを巻き戻す）</h3>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-body"><h4>GitHubで問題のマージコミットを見つける</h4><p>Pull requests → Closed から探す</p></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body"><h4>「Revert」ボタンをクリック</h4><p>リバート用PRが自動作成される → マージすると変更が取り消されます</p></div></div>
+</div></div>
+<div class="callout warn"><div class="callout-icon">⚠️</div><div class="callout-body"><h4>DBの変更は自動では戻らない</h4><p>コードのロールバックでDBのテーブル構造は元に戻りません。DBを戻す必要がある場合は手動で「元に戻すSQL」を書いて実行します。だからこそテスト環境での確認が重要です。</p></div></div>
+</section>
+
+<section class="section" id="s13"><div class="section-num">SECTION 13</div><h2>やってはいけない、3つの絶対ルール</h2>
+<div class="rules-grid">
+  <div class="rule-card"><div class="rule-num">01</div><h4>本番とテストのDBを混ぜない</h4><p>テストデータがお客さんに見えたり、本番データが壊れたりします。</p>
+    <div class="example"><strong>❌ NG：</strong>テスト環境から本番のSupabase URLに接続<br><span class="good">✅ OK：</span>環境変数で接続先を完全に分離</div></div>
+  <div class="rule-card"><div class="rule-num">02</div><h4>鍵（APIキー）をコードに書かない</h4><p>GitHubに鍵が公開されると、不正アクセスされます。</p>
+    <div class="example"><strong>❌ NG：</strong>const key = "eyJhbGci..." と直書き<br><span class="good">✅ OK：</span>const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY</div></div>
+  <div class="rule-card"><div class="rule-num">03</div><h4>mainブランチに直接プッシュしない</h4><p>未検証のコードが本番に反映されてしまいます。</p>
+    <div class="example"><strong>❌ NG：</strong>git push origin main で直接送る<br><span class="good">✅ OK：</span>feature → develop → テスト → main の順番を守る</div></div>
+</div></section>
+
+<div class="summary-banner"><h3>この3つを守れば安全！</h3>
+<div class="summary-items">
+  <div class="summary-item"><span class="num">1</span>本番とテストのDBは完全に分ける（混ぜるな危険）</div>
+  <div class="summary-item"><span class="num">2</span>鍵はコードに書かず環境変数に入れる（鍵を落とすな）</div>
+  <div class="summary-item"><span class="num">3</span>本番への反映は必ずテストを通す（味見してから出す）</div>
+</div></div>
+
+<section class="section" id="ref"><div class="section-num">APPENDIX A</div><h2>コマンドリファレンス</h2>
+<div class="cmd-group"><h3><span class="git-tag">GIT</span> 基本のGitコマンド</h3>
+<table class="data-table"><thead><tr><th>コマンド</th><th>意味</th><th>いつ使う？</th></tr></thead><tbody>
+  <tr><td><code>git status</code></td><td>変更ファイルの確認</td><td>コミット前に毎回</td></tr>
+  <tr><td><code>git add .</code></td><td>全変更を記録対象に</td><td>コミット前に毎回</td></tr>
+  <tr><td><code>git commit -m "メッセージ"</code></td><td>変更を記録</td><td>区切りのよいところで</td></tr>
+  <tr><td><code>git push origin ブランチ名</code></td><td>GitHubに送る</td><td>コミット後</td></tr>
+  <tr><td><code>git pull origin develop</code></td><td>最新を取得</td><td>作業開始前</td></tr>
+  <tr><td><code>git checkout ブランチ名</code></td><td>ブランチ切り替え</td><td>ブランチ移動時</td></tr>
+  <tr><td><code>git checkout -b 新ブランチ名</code></td><td>新ブランチ作成</td><td>新機能開始時</td></tr>
+  <tr><td><code>git log --oneline</code></td><td>履歴を一覧表示</td><td>履歴確認時</td></tr>
+</tbody></table></div>
+<div class="cmd-group"><h3><span class="sb-tag">SUPABASE</span> Supabase CLIコマンド</h3>
+<table class="data-table"><thead><tr><th>コマンド</th><th>意味</th><th>いつ使う？</th></tr></thead><tbody>
+  <tr><td><code>supabase init</code></td><td>設定ファイル作成</td><td>初回のみ</td></tr>
+  <tr><td><code>supabase link --project-ref ID</code></td><td>DBに接続</td><td>接続先切替時</td></tr>
+  <tr><td><code>supabase migration new 名前</code></td><td>変更ファイル作成</td><td>テーブル変更前</td></tr>
+  <tr><td><code>supabase db push</code></td><td>変更をDBに適用</td><td>マイグレーション後</td></tr>
+  <tr><td><code>supabase db diff</code></td><td>差分を確認</td><td>手動変更の確認</td></tr>
+  <tr><td><code>supabase db reset</code></td><td>DB初期化</td><td>テストDBリセット</td></tr>
+</tbody></table></div>
+<div class="cmd-group"><h3><span class="vc-tag">VERCEL</span> Vercel操作（ブラウザ）</h3>
+<table class="data-table"><thead><tr><th>操作</th><th>場所</th><th>いつ使う？</th></tr></thead><tbody>
+  <tr><td>環境変数の設定</td><td>Settings → Environment Variables</td><td>初回 or 鍵の変更時</td></tr>
+  <tr><td>デプロイ状況確認</td><td>Deployments タブ</td><td>デプロイ後</td></tr>
+  <tr><td>ロールバック</td><td>Deployments → … → Redeploy</td><td>トラブル時</td></tr>
+  <tr><td>ドメイン設定</td><td>Settings → Domains</td><td>独自ドメイン設定時</td></tr>
+</tbody></table></div></section>
+
+<section class="section" id="checklist"><div class="section-num">APPENDIX B</div><h2>セットアップ完了チェックリスト</h2><p>すべての初期設定が終わったら、以下を確認してください。</p>
+<div class="steps">
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>GitHub</h4><p>リポジトリが作成され、main と develop の2つのブランチがある</p></div></div>
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>Supabase</h4><p>dev と prod の2プロジェクトがあり、URL / anon key / service_role key / project ref をメモ済み</p></div></div>
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>ローカル環境</h4><p>.env.local にテスト用の鍵が設定済み。.gitignore に .env.local が含まれている</p></div></div>
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>Vercel</h4><p>GitHubが接続済み。Production / Preview で異なる環境変数が設定されている</p></div></div>
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>Supabase CLI</h4><p>supabase init と supabase link がテスト用プロジェクトに対して完了</p></div></div>
+  <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>動作確認</h4><p>npm run dev でローカル起動し、テスト用DBに接続できることを確認済み</p></div></div>
+</div></section>
+
+</main>
+<script>
+function toggleNav(){document.getElementById('sideNav').classList.toggle('open');document.getElementById('navOverlay').classList.toggle('open')}
+function goTo(id){toggleNav();setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}),300)}
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}})},{threshold:0.06});
+document.querySelectorAll('.section,.summary-banner').forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>
