@@ -183,6 +183,8 @@ body{font-family:'Noto Sans JP',sans-serif;font-weight:400;background:var(--bg);
   <div class="nav-group"><div class="nav-group-label">運用・トラブル</div>
     <a class="nav-link" onclick="goTo('s12')"><span class="num">12</span>ロールバック</a>
     <a class="nav-link" onclick="goTo('s13')"><span class="num">13</span>3つの絶対ルール</a></div>
+  <div class="nav-group"><div class="nav-group-label">コスト最適化</div>
+    <a class="nav-link" onclick="goTo('schema')"><span class="num">💰</span>スキーマ分離（無料運用）</a></div>
   <div class="nav-group"><div class="nav-group-label">付録</div>
     <a class="nav-link" onclick="goTo('ref')"><span class="num">＊</span>コマンド一覧</a>
     <a class="nav-link" onclick="goTo('checklist')"><span class="num">✓</span>チェックリスト</a></div>
@@ -303,7 +305,9 @@ body{font-family:'Noto Sans JP',sans-serif;font-weight:400;background:var(--bg);
   <tr><td>anon key</td><td><code>eyJhbGci...xxx</code></td><td><code>eyJhbGci...yyy</code></td></tr>
   <tr><td>service_role key</td><td><code>eyJhbGci...xxx</code></td><td><code>eyJhbGci...yyy</code></td></tr>
   <tr><td>Project ref</td><td><code>xxxxxxxxxx</code></td><td><code>yyyyyyyyyy</code></td></tr>
-</tbody></table></section>
+</tbody></table>
+<div class="callout info"><div class="callout-icon">💰</div><div class="callout-body"><h4>コストを抑えたい場合：スキーマ分離という方法</h4><p>無料プランではアクティブなプロジェクトが2つまでです。テスト＋本番で枠を使い切るため、複数システムを運用する場合はProプラン（月$25〜）が必要です。<br>しかし <strong>「スキーマ分離」</strong> を使えば、1つのプロジェクト内でテスト用と本番用のデータを分離でき、無料のまま運用できます。→ <a style="color:var(--accent);cursor:pointer" onclick="document.getElementById('schema').scrollIntoView({behavior:'smooth'})">詳しい手順はこちら</a></p></div></div>
+</section>
 
 <section class="section" id="s6"><div class="section-num">SECTION 06</div><h2>環境変数を設定する</h2><p>Supabaseの鍵をコードに直接書くのは危険です。「環境変数」という仕組みで、コードの外に安全に保管します。</p>
 <div class="sub-section"><div class="sub-label">STEP A</div><h3>ローカル開発用の .env.local を作成</h3><p>プロジェクトのルートフォルダ（my-appの直下）に <code>.env.local</code> ファイルを新規作成します。</p>
@@ -525,6 +529,262 @@ body{font-family:'Noto Sans JP',sans-serif;font-weight:400;background:var(--bg);
   <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>Supabase CLI</h4><p>supabase init と supabase link がテスト用プロジェクトに対して完了</p></div></div>
   <div class="step"><div class="step-num">✓</div><div class="step-body"><h4>動作確認</h4><p>npm run dev でローカル起動し、テスト用DBに接続できることを確認済み</p></div></div>
 </div></section>
+
+<!-- ===== SCHEMA SEPARATION ===== -->
+<section class="section" id="schema">
+  <div class="section-num">COST OPTIMIZATION</div>
+  <h2>スキーマ分離で無料のまま運用する</h2>
+  <p>Supabaseの無料プランではアクティブなプロジェクトが2つまでです。しかし「スキーマ」を使えば、1つのプロジェクト内でテスト用と本番用のデータを分離できます。</p>
+
+  <div class="sub-section">
+    <div class="sub-label">そもそもスキーマとは？</div>
+    <h3>データベースの中の「フォルダ」のようなもの</h3>
+    <p>同じデータベースの中に仕切りを作って、テーブルをグループ分けできる仕組みです。</p>
+    <div class="arch-diagram"><div class="arch-flow">
+      <div><div class="arch-label">1つのSupabaseプロジェクト（1つのDB）の中身</div>
+        <div class="arch-row">
+          <div class="arch-node supabase">📁 public（本番用スキーマ）</div>
+          <div class="arch-node" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24">📁 dev（テスト用スキーマ）</div>
+        </div>
+      </div>
+      <div><div class="arch-label">それぞれのスキーマの中に同じ構造のテーブルがある（データは別々）</div>
+        <div class="arch-row">
+          <div class="arch-node branch">public.users</div>
+          <div class="arch-node branch">public.orders</div>
+          <div class="arch-arrow">│</div>
+          <div class="arch-node" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24">dev.users</div>
+          <div class="arch-node" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24">dev.orders</div>
+        </div>
+      </div>
+    </div></div>
+    <p>お弁当屋さんでたとえると、冷蔵庫を2台買う代わりに、<strong>1台の冷蔵庫の中に仕切りを入れて「試食用の棚」と「お店用の棚」に分ける</strong>イメージです。</p>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">比較</div>
+    <h3>プロジェクト分離 vs スキーマ分離</h3>
+    <table class="data-table">
+      <thead><tr><th></th><th>プロジェクト分離（通常の方法）</th><th>スキーマ分離（コスト節約）</th></tr></thead>
+      <tbody>
+        <tr><td><strong>コスト</strong></td><td>2プロジェクト必要（無料枠を消費）</td><td>1プロジェクトで済む（無料枠節約）</td></tr>
+        <tr><td><strong>安全性</strong></td><td>完全に独立。ミスしても影響なし</td><td>同じDB内なのでミスのリスクあり</td></tr>
+        <tr><td><strong>設定の手間</strong></td><td>環境変数の切替だけで簡単</td><td>スキーマ作成・権限設定が必要</td></tr>
+        <tr><td><strong>チーム向き</strong></td><td>大規模チーム向き</td><td>小規模チーム・個人向き</td></tr>
+        <tr><td><strong>Vercel連携</strong></td><td>Production/Previewで自動分離</td><td>環境変数でスキーマ名を切替</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 1</div>
+    <h3>Supabaseプロジェクトを1つだけ作成する</h3>
+    <p>通常の手順（Section 05）と同じですが、<strong>プロジェクトは1つだけ</strong>作成します。作成後、Project URL / anon key / service_role key / project ref をメモしてください。</p>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 2</div>
+    <h3>テスト用スキーマを作成する</h3>
+    <p>SupabaseダッシュボードのSQL Editorで以下のSQLを実行します。</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body">
+        <h4>SQL Editorを開く</h4>
+        <p>Supabaseダッシュボード → 左メニューの「SQL Editor」をクリック → 「New query」</p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body">
+        <h4>テスト用スキーマを作成するSQLを実行</h4>
+        <p>以下のSQLをコピー＆ペーストして「Run」ボタンを押します：</p>
+      </div></div>
+    </div>
+    <div class="code-block"><div class="code-header"><span class="lang">SQL</span><span>SQL Editorで実行（コピペでOK）</span></div>
+<pre><span class="c">-- ① テスト用スキーマを作成</span>
+<span class="o">CREATE SCHEMA</span> <span class="v">dev</span>;
+
+<span class="c">-- ② APIからアクセスできるように権限を付与</span>
+<span class="o">GRANT USAGE ON SCHEMA</span> dev <span class="o">TO</span> anon, authenticated, service_role;
+
+<span class="c">-- ③ スキーマ内の全テーブルへのアクセス権限</span>
+<span class="o">GRANT ALL ON ALL TABLES IN SCHEMA</span> dev
+  <span class="o">TO</span> anon, authenticated, service_role;
+
+<span class="c">-- ④ 今後作るテーブルにも自動で権限を付与</span>
+<span class="o">ALTER DEFAULT PRIVILEGES FOR ROLE</span> postgres
+  <span class="o">IN SCHEMA</span> dev
+  <span class="o">GRANT ALL ON TABLES TO</span> anon, authenticated, service_role;
+
+<span class="c">-- ⑤ シーケンス（連番）の権限</span>
+<span class="o">GRANT ALL ON ALL SEQUENCES IN SCHEMA</span> dev
+  <span class="o">TO</span> anon, authenticated, service_role;
+
+<span class="o">ALTER DEFAULT PRIVILEGES FOR ROLE</span> postgres
+  <span class="o">IN SCHEMA</span> dev
+  <span class="o">GRANT ALL ON SEQUENCES TO</span> anon, authenticated, service_role;
+
+<span class="c">-- ⑥ 関数（ストアドプロシージャ）の権限</span>
+<span class="o">GRANT ALL ON ALL ROUTINES IN SCHEMA</span> dev
+  <span class="o">TO</span> anon, authenticated, service_role;
+
+<span class="o">ALTER DEFAULT PRIVILEGES FOR ROLE</span> postgres
+  <span class="o">IN SCHEMA</span> dev
+  <span class="o">GRANT ALL ON ROUTINES TO</span> anon, authenticated, service_role;</pre></div>
+    <div class="callout info"><div class="callout-icon">💬</div><div class="callout-body">
+      <h4>このSQLは何をしている？</h4>
+      <p>① <code>dev</code> という名前の仕切り（スキーマ）を作成<br>
+      ② 〜 ⑥ Supabaseのクライアント（anon / authenticated / service_role）が dev スキーマにアクセスできるように許可を与えています。これがないとAPIから dev スキーマのテーブルを操作できません。</p>
+    </div></div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 3</div>
+    <h3>ダッシュボードでスキーマをAPIに公開する</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body">
+        <h4>APIの設定画面を開く</h4>
+        <p>Supabaseダッシュボード → <strong>Project Settings</strong>（左下の歯車アイコン）→ <strong>Data API</strong></p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body">
+        <h4>「Exposed schemas」に dev を追加</h4>
+        <p>「Exposed schemas」の入力欄をクリック → <code>dev</code> と入力して追加 → 「Save」をクリック</p>
+        <div class="substep">
+          <strong>設定後のExposed schemas：</strong><code>public</code>, <code>dev</code><br><br>
+          <strong>なぜ必要？：</strong>SupabaseのAPI（supabase-jsクライアント）は、ここに登録されたスキーマのテーブルだけにアクセスできます。登録しないと「スキーマが見つからない」エラーになります。
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 4</div>
+    <h3>テーブルを両方のスキーマに作成する</h3>
+    <p>マイグレーションファイルで、本番用（public）とテスト用（dev）の両方にテーブルを作成します。</p>
+    <div class="code-block"><div class="code-header"><span class="lang">SQL</span><span>マイグレーションファイルの例</span></div>
+<pre><span class="c">-- ===== 本番用（publicスキーマ）=====</span>
+<span class="o">CREATE TABLE</span> <span class="v">public</span>.users (
+  <span class="b">id</span>         uuid <span class="k">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  <span class="b">email</span>      text <span class="k">NOT NULL UNIQUE</span>,
+  <span class="b">name</span>       text,
+  <span class="b">created_at</span> timestamptz <span class="k">DEFAULT</span> now()
+);
+<span class="o">ALTER TABLE</span> public.users <span class="o">ENABLE ROW LEVEL SECURITY</span>;
+
+<span class="c">-- ===== テスト用（devスキーマ） =====</span>
+<span class="c">-- 全く同じ構造をdevスキーマにも作る</span>
+<span class="o">CREATE TABLE</span> <span class="v">dev</span>.users (
+  <span class="b">id</span>         uuid <span class="k">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  <span class="b">email</span>      text <span class="k">NOT NULL UNIQUE</span>,
+  <span class="b">name</span>       text,
+  <span class="b">created_at</span> timestamptz <span class="k">DEFAULT</span> now()
+);
+<span class="o">ALTER TABLE</span> dev.users <span class="o">ENABLE ROW LEVEL SECURITY</span>;</pre></div>
+    <div class="callout warn"><div class="callout-icon">⚠️</div><div class="callout-body">
+      <h4>RLSポリシーも両方に設定する</h4>
+      <p>テーブルごとに設定するRLS（行レベルセキュリティ）ポリシーも、public と dev の両方に同じ内容で作成してください。片方だけだともう片方でデータにアクセスできなくなります。</p>
+    </div></div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 5</div>
+    <h3>環境変数でスキーマを切り替える</h3>
+    <p>コードの接続設定で、環境変数を使ってどちらのスキーマに接続するかを切り替えます。</p>
+
+    <div class="code-block"><div class="code-header"><span class="lang">.env.local</span><span>ローカル開発用（テスト用スキーマ）</span></div>
+<pre><span class="k">NEXT_PUBLIC_SUPABASE_URL</span>=<span class="v">https://xxxxx.supabase.co</span>
+<span class="k">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>=<span class="v">eyJhbGci...あなたのanon key...</span>
+<span class="k">NEXT_PUBLIC_SUPABASE_SCHEMA</span>=<span class="v">dev</span>       <span class="c"># ← テスト用スキーマ</span></pre></div>
+
+    <p>Vercelの環境変数には以下のように設定します：</p>
+    <table class="data-table">
+      <thead><tr><th>環境変数名</th><th>Production（本番）</th><th>Preview（テスト）</th></tr></thead>
+      <tbody>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td colspan="2">同じURL（プロジェクトが1つなので）</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td colspan="2">同じ鍵（プロジェクトが1つなので）</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_SCHEMA</code></td><td><code>public</code></td><td><code>dev</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout tip"><div class="callout-icon">💡</div><div class="callout-body">
+      <h4>ポイント</h4>
+      <p>URLと鍵は本番もテストも同じです。<strong>スキーマ名だけが違う</strong>ので、環境変数1つ追加するだけで切替ができます。</p>
+    </div></div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 6</div>
+    <h3>コードでスキーマを環境変数から読み取る</h3>
+    <div class="code-block"><div class="code-header"><span class="lang">TypeScript</span><span>lib/supabase.ts</span></div>
+<pre><span class="k">import</span> { createClient } <span class="k">from</span> <span class="v">'@supabase/supabase-js'</span>
+
+<span class="k">const</span> supabaseUrl = <span class="b">process.env.NEXT_PUBLIC_SUPABASE_URL</span>!
+<span class="k">const</span> supabaseKey = <span class="b">process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY</span>!
+<span class="k">const</span> schema = <span class="b">process.env.NEXT_PUBLIC_SUPABASE_SCHEMA</span> || <span class="v">'public'</span>
+
+<span class="k">export const</span> supabase = createClient(supabaseUrl, supabaseKey, {
+  <span class="p">db: { schema }</span>  <span class="c">// ← ここでスキーマを指定</span>
+})</pre></div>
+    <div class="callout info"><div class="callout-icon">💬</div><div class="callout-body">
+      <h4>これだけで切り替わる</h4>
+      <p>環境変数 <code>NEXT_PUBLIC_SUPABASE_SCHEMA</code> が <code>dev</code> ならテスト用テーブル、<code>public</code> なら本番用テーブルに自動で接続されます。コードの変更は不要です。</p>
+    </div></div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">STEP 7</div>
+    <h3>動作確認</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body">
+        <h4>ローカルで起動</h4>
+        <p><code>npm run dev</code> で起動。.env.local のスキーマが <code>dev</code> になっていることを確認</p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body">
+        <h4>テストデータを入れてみる</h4>
+        <p>アプリからデータを登録し、Supabaseダッシュボードの Table Editor で <code>dev</code> スキーマにデータが入っていることを確認</p>
+        <div class="substep"><strong>Table Editorでスキーマを切り替える方法：</strong><br>左上のスキーマ選択ドロップダウンで「dev」を選択すると、devスキーマのテーブルが表示されます</div>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body">
+        <h4>publicスキーマにデータが入っていないことを確認</h4>
+        <p>スキーマを「public」に切り替えて、テストデータが混入していないことを確認します</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-label">テーブルを追加するとき</div>
+    <h3>運用ルール：テーブル変更は必ず両スキーマに適用</h3>
+    <p>新しいテーブルやカラムを追加するときは、<strong>public と dev の両方に同じ変更を適用</strong>するのを忘れないでください。片方だけ変更すると、テスト環境と本番環境でテーブル構造が違ってしまい、テストの意味がなくなります。</p>
+    <div class="code-block"><div class="code-header"><span class="lang">SQL</span><span>マイグレーション例：カラム追加</span></div>
+<pre><span class="c">-- 本番用に追加</span>
+<span class="o">ALTER TABLE</span> <span class="v">public</span>.users <span class="o">ADD COLUMN</span> <span class="b">avatar_url</span> text;
+
+<span class="c">-- テスト用にも同じ変更を追加（忘れずに！）</span>
+<span class="o">ALTER TABLE</span> <span class="v">dev</span>.users <span class="o">ADD COLUMN</span> <span class="b">avatar_url</span> text;</pre></div>
+  </div>
+
+  <div class="callout warn"><div class="callout-icon">⚠️</div><div class="callout-body">
+    <h4>スキーマ分離の注意点まとめ</h4>
+    <p><strong>① テーブル構造は必ず両方のスキーマで同じにする</strong> — 片方だけ変更するとテストが無意味になります<br>
+    <strong>② RLSポリシーも両方に設定する</strong> — 忘れるとデータにアクセスできなくなります<br>
+    <strong>③ 本番データを誤って操作しないよう注意</strong> — 同じプロジェクト内にあるため、スキーマ名を間違えると本番データに影響します<br>
+    <strong>④ Supabase Auth（認証）はスキーマを跨いで共有</strong> — auth.users テーブルはスキーマに関係なく1つです。テスト用の認証ユーザーと本番用が混在する点に注意してください</p>
+  </div></div>
+
+  <div class="sub-section">
+    <div class="sub-label">まとめ</div>
+    <h3>スキーマ分離の全体像</h3>
+    <div class="arch-diagram"><div class="arch-flow">
+      <div><div class="arch-label">Supabaseプロジェクト（1つだけ・無料枠1つ消費）</div>
+        <div class="arch-row">
+          <div class="arch-node supabase">📁 public スキーマ（本番データ）</div>
+          <div class="arch-node" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24">📁 dev スキーマ（テストデータ）</div>
+        </div>
+      </div>
+      <div><div class="arch-label">Vercel</div>
+        <div class="arch-row">
+          <div class="arch-node vercel">▲ Production → SCHEMA=public</div>
+          <div class="arch-node" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:#fbbf24">▲ Preview → SCHEMA=dev</div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</section>
 
 </main>
 <script>
